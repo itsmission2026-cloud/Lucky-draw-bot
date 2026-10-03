@@ -1,3 +1,4 @@
+ 
 import logging
 import os
 import random
@@ -132,7 +133,7 @@ total_amount = price * qty
 await update.message.reply_text(
 "✅ Payment proof received!\n"
 "Our admin team is verifying your payment. You will receive your confirmation shortly.\n\n"
-"📢 Join our official channel:\https://t.me/indiaLuckyDraw"
+"📢 Join our official channel:\nhttps://t.me/indiaLuckyDraw"
 )
 
 # Prepare Admin Notification
@@ -191,8 +192,9 @@ channel_link = "https://t.me/indiaLuckyDraw"
 
 if action == "approve":
 # Generate random 5-digit ticket numbers starting from 12000
+ticket_numbers = [str(random.randint(12001, 
  
-ticket_numbers = [str(random.randint(12001, 19999)) for _ in range(ticket_qty)]
+19999)) for _ in range(ticket_qty)]
 formatted_tickets = ", ".join(ticket_numbers)
 
 # Notify User
@@ -208,8 +210,8 @@ parse_mode="Markdown"
 
 # Update Admin Message Status
 status_text = f"\n\n✅ APPROVED | Ticket Number(s): {formatted_tickets}"
- 
 if query.message.photo:
+ 
 await query.edit_message_caption(caption=query.message.caption + status_text)
 else:
 await query.edit_message_text(text=query.message.text + status_text)
@@ -223,8 +225,8 @@ text="❌ Payment Verification Failed\n\n"
 )
 
 # Update Admin Message Status
- 
 status_text = "\n\n❌ STATUS: REJECTED"
+ 
 if query.message.photo:
 await query.edit_message_caption(caption=query.message.caption + status_text)
 else:
@@ -235,8 +237,9 @@ await update.message.reply_text("Cancelled. Send /start to begin again.")
 return ConversationHandler.END
 
 --- MAIN RUNNER ---
- 
+
 if name == "main":
+ 
 token = os.getenv("BOT_TOKEN")
 if not token:
 logging.error("CRITICAL ERROR: BOT_TOKEN is missing!")
@@ -252,8 +255,9 @@ CallbackQueryHandler(handle_draw_selection, pattern="^draw_"),
 CallbackQueryHandler(handle_tier_selection, pattern="^price_")
  ],
 TICKET_QTY: [MessageHandler(filters.TEXT&~filters.COMMAND, handle_quantity)],
+USER_NAME: [MessageHandler(filters.TEXT & 
  
-USER_NAME: [MessageHandler(filters.TEXT&~filters.COMMAND, handle_name)],
+~filters.COMMAND, handle_name)],
 PHONE_NUM: [MessageHandler(filters.TEXT&~filters.COMMAND, handle_phone)],
 PAYMENT_PROOF: [MessageHandler(filters.ALL&~filters.COMMAND, handle_payment_proof)]
 },
