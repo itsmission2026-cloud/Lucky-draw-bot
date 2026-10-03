@@ -106,7 +106,7 @@ async def handle_phone(update: Update, context: ContextTypes.DEFAULT_TYPE):
 async def handle_payment_proof(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await update.message.reply_text(
         "✅ Payment details received!\nOur team will verify and confirm shortly.\n\n"
-        "📢 Join our channel for updates:\nhttps://t.me/your_channel_username"
+        "📢 Join our channel for updates:\https://t.me/indiaLuckyDraw"
     )
     return ConversationHandler.END
 
