@@ -114,7 +114,7 @@ async def cancel(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await update.message.reply_text("Cancelled. Send /start to begin again.")
     return ConversationHandler.END
 
-if name == "main":
+if __name__ == "__main__":
     token = os.getenv("BOT_TOKEN")
     if not token:
         logging.error("CRITICAL ERROR: BOT_TOKEN environment variable is missing!")
