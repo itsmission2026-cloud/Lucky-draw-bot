@@ -77,7 +77,7 @@ async def handle_draw_selection(update: Update, context: ContextTypes.DEFAULT_TY
         await query.edit_message_text(
             "Monthly Mega Draw selected (499 per ticket).\n"
             "How many tickets would you like to buy?\n\n"
-            "💡 Tip: Send /restart at any time to start over."
+            "💡 Send /restart at any time to start over."
         )
         return TICKET_QTY
 
@@ -91,9 +91,9 @@ async def handle_tier_selection(update: Update, context: ContextTypes.DEFAULT_TY
     price = 99 if query.data == "price_99" else 249
     context.user_data['ticket_price'] = price
     await query.edit_message_text(
-        f"Selected {price} Tier.\n🎁 Offer: Buy 2 Get 1 Free!\n"
+        f"Selected ₹{price} Tier.\n🎁 Offer: Buy 2 Get 1 Free!\n"
         f"How many tickets would you like to buy?\n\n"
-        f"💡 Tip: Send /restart at any time to start over."
+        f"💡 Send /restart at any time to start over."
     )
     return TICKET_QTY
 
@@ -103,105 +103,109 @@ async def handle_quantity(update: Update, context: ContextTypes.DEFAULT_TYPE):
         await update.message.reply_text("Please enter a valid number, or send /restart to start over.")
         return TICKET_QTY
     qty = int(text)
-    price = context.user_data['ticket_price']
+    price = context.user_data.get('ticket_price', 99)
     total_tickets = qty + (qty // 2) if price in [99, 249] else qty
     context.user_data['quantity'] = qty
     context.user_data['total_tickets'] = total_tickets
-    await update.message.reply_text(
-        f"Got it ({total_tickets} tickets total)!\n"
-        f"Please enter your Full Name (or send /restart to reset):"
-    )
+    await update.message.reply_text("Got it! Please enter your **Full Name**:")
     return USER_NAME
 
 async def handle_name(update: Update, context: ContextTypes.DEFAULT_TYPE):
     context.user_data['full_name'] = update.message.text
-    await update.message.reply_text("Please enter your 10-digit Phone / WhatsApp number (or send /restart to reset):")
+    await update.message.reply_text("Please enter your 10-digit **Phone / WhatsApp number**:")
     return PHONE_NUM
 
 async def handle_phone(update: Update, context: ContextTypes.DEFAULT_TYPE):
     context.user_data['phone'] = update.message.text
-    price = context.user_data['ticket_price']
-    total_amount = price * context.user_data['quantity']
+    price = context.user_data.get('ticket_price', 99)
+    total_amount = price * context.user_data.get('quantity', 1)
     upi_id = "naseemudheenn@oksbi"
     
     summary = (
-        f"📋 Order Summary:\n"
-        f"Name: {context.user_data['full_name']}\n"
-        f"Phone: {context.user_data['phone']}\n"
-        f"Tickets: {context.user_data['total_tickets']}\n"
-        f"Total Amount: ₹{total_amount}\n\n"
-        f"💳 Pay via UPI to: {upi_id}\n\n"
-        f"After payment, reply with your Transaction ID or Screenshot.\n"
-        f"Or send /restart to start over."
+        f"📋 **Order Summary**\n"
+        f"───────────────\n"
+        f"👤 Name: {context.user_data['full_name']}\n"
+        f"📞 Phone: {context.user_data['phone']}\n"
+        f"🎟️ Total Tickets: {context.user_data['total_tickets']}\n"
+        f"💰 Payable Amount: ₹{total_amount}\n"
+        f"───────────────\n\n"
+        f"💳 **Pay via UPI**: `{upi_id}`\n\n"
+        f"📸 Please send the payment screenshot or UTR/Transaction ID now:"
     )
-    await update.message.reply_text(summary)
+    await update.message.reply_text(summary, parse_mode="Markdown")
     return PAYMENT_PROOF
 
 async def handle_payment_proof(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    try:
-        user = update.effective_user
-        user_id = user.id
-        full_name = context.user_data.get('full_name', 'N/A')
-        phone = context.user_data.get('phone', 'N/A')
-        total_tickets = context.user_data.get('total_tickets', 1)
-        price = context.user_data.get('ticket_price', 0)
-        qty = context.user_data.get('quantity', 1)
-        total_amount = price * qty
+    user = update.effective_user
+    user_id = user.id
+    full_name = context.user_data.get('full_name', 'N/A')
+    phone = context.user_data.get('phone', 'N/A')
+    total_tickets = context.user_data.get('total_tickets', 1)
+    price = context.user_data.get('ticket_price', 0)
+    qty = context.user_data.get('quantity', 1)
+    total_amount = price * qty
 
-        admin_msg = (
-            f"🚨 NEW PAYMENT PROOF RECEIVED\n\n"
-            f"👤 User: {full_name} (@{user.username or 'NoUsername'})\n"
-            f"📞 Phone: {phone}\n"
-            f"🎟️ Tickets Requested: {total_tickets} ({qty} paid)\n"
-            f"💰 Amount Paid: ₹{total_amount}\n"
-            f"🆔 User ID: {user_id}"
-        )
+    # 1. Caption for Admin Group
+    admin_caption = (
+        f"🚨 **NEW PAYMENT PROOF RECEIVED**\n\n"
+        f"👤 **Name:** {full_name}\n"
+        f"📞 **Phone:** `{phone}`\n"
+        f"🎟️ **Tickets:** {total_tickets} ({qty} paid)\n"
+        f"💰 **Amount Paid:** ₹{total_amount}\n"
+        f"🆔 **Telegram ID:** `{user_id}`\n"
+        f"Username: @{user.username or 'None'}"
+    )
 
-        admin_keyboard = InlineKeyboardMarkup([
-            [
-                InlineKeyboardButton("✅ Approve", callback_data=f"approve_{user_id}_{total_tickets}"),
-                InlineKeyboardButton("❌ Reject", callback_data=f"reject_{user_id}_0")
-            ]
-        ])
+    admin_keyboard = InlineKeyboardMarkup([
+        [
+            InlineKeyboardButton("✅ Approve", callback_data=f"approve_{user_id}_{total_tickets}"),
+            InlineKeyboardButton("❌ Reject", callback_data=f"reject_{user_id}_{total_tickets}")
+        ]
+    ])
 
-        admin_group_id = os.getenv("ADMIN_GROUP_ID")
-        
-        if admin_group_id:
-            chat_id = int(admin_group_id)
+    admin_group_id = os.getenv("ADMIN_GROUP_ID")
+    
+    # 2. Try sending proof to Admin Group
+    if admin_group_id:
+        try:
+            chat_id = int(admin_group_id.strip())
             if update.message.photo:
-                photo_file_id = update.message.photo[-1].file_id
+                photo_id = update.message.photo[-1].file_id
                 await context.bot.send_photo(
                     chat_id=chat_id,
-                    photo=photo_file_id,
-                    caption=admin_msg,
-                    reply_markup=admin_keyboard
+                    photo=photo_id,
+                    caption=admin_caption,
+                    reply_markup=admin_keyboard,
+                    parse_mode="Markdown"
                 )
             elif update.message.document:
-                doc_file_id = update.message.document.file_id
+                doc_id = update.message.document.file_id
                 await context.bot.send_document(
                     chat_id=chat_id,
-                    document=doc_file_id,
-                    caption=admin_msg,
-                    reply_markup=admin_keyboard
+                    document=doc_id,
+                    caption=admin_caption,
+                    reply_markup=admin_keyboard,
+                    parse_mode="Markdown"
                 )
             else:
                 text_proof = update.message.text
                 await context.bot.send_message(
                     chat_id=chat_id,
-                    text=f"{admin_msg}\n\n📝 Proof/UTR: {text_proof}",
-                    reply_markup=admin_keyboard
+                    text=f"{admin_caption}\n\n📝 **Proof/UTR:** {text_proof}",
+                    reply_markup=admin_keyboard,
+                    parse_mode="Markdown"
                 )
+        except Exception as e:
+            logging.error(f"Failed to send to admin group: {e}")
 
-        await update.message.reply_text(
-            "✅ Payment proof received!\n"
-            "Our admin team is verifying your payment. You will receive your confirmation shortly.\n\n"
-            "📢 Join our official channel:\nhttps://t.me/indiaLuckyDraw\n\n"
-            "Want to buy more tickets? Send /start or /restart."
-        )
-
-    except Exception as e:
-        logging.error(f"Error handling payment proof: {e}")
-        await update.message.reply_text("There was an issue processing your submission. Send /restart to start over.")
+    # 3. Always Reply to User
+    await update.message.reply_text(
+        "✅ **Payment proof received!**\n\n"
+        "Our admin team is verifying your payment. Your ticket details will be delivered here once approved.\n\n"
+        "📢 Join our official updates channel:\nhttps://t.me/indiaLuckyDraw\n\n"
+        "To buy more tickets, send /start.",
+        parse_mode="Markdown"
+    )
 
     return ConversationHandler.END
 
@@ -219,36 +223,53 @@ async def handle_admin_action(update: Update, context: ContextTypes.DEFAULT_TYPE
     channel_link = "https://t.me/indiaLuckyDraw"
 
     if action == "approve":
-        ticket_numbers = [str(random.randint(12001, 19999)) for _ in range(ticket_qty)]
-        formatted_tickets = ", ".join(ticket_numbers)
+        # Generate random unique 5-digit coupon numbers
+        ticket_numbers = [f"#{random.randint(12000, 99999)}" for _ in range(ticket_qty)]
+        formatted_tickets = "\n".join([f"🎫 **{num}**" for num in ticket_numbers])
 
-        await context.bot.send_message(
-            chat_id=target_user_id,
-            text=f"🎉 PAYMENT CONFIRMED! 🎉\n\n"
-                 f"Congratulations! You are enrolled into the draw.\n"
-                 f"🎟 Ticket Number(s): {formatted_tickets}\n\n"
-                 f"Good luck! 🍀\n\n"
-                 f"📢 Stay tuned for winner announcements here:\n{channel_link}"
+        # Centered message format to user
+        user_message = (
+            f"🎉 **PAYMENT APPROVED!** 🎉\n\n"
+            f"Congratulations! You are officially enrolled in the draw.\n\n"
+            f"👇 **YOUR TICKET NUMBER(S)** 👇\n\n"
+            f"{formatted_tickets}\n\n"
+            f"───────────────\n"
+            f"📢 **Join Official Telegram Channel:**\n"
+            f"👉 {channel_link} 👈\n"
+            f"───────────────\n\n"
+            f"🍀 Good luck!"
         )
 
-        status_text = f"\n\n✅ APPROVED | Ticket Number(s): {formatted_tickets}"
-        if query.message.photo or query.message.document:
-            await query.edit_message_caption(caption=query.message.caption + status_text)
-        else:
-            await query.edit_message_text(text=query.message.text + status_text)
+        try:
+            await context.bot.send_message(
+                chat_id=target_user_id,
+                text=user_message,
+                parse_mode="Markdown"
+            )
+            status_text = f"\n\n✅ **APPROVED**\nTickets Issued:\n{', '.join(ticket_numbers)}"
+        except Exception as e:
+            status_text = f"\n\n⚠️ **Approved but failed to notify user:** {e}"
 
     elif action == "reject":
-        await context.bot.send_message(
-            chat_id=target_user_id,
-            text="❌ Payment Verification Failed\n\n"
-                 "We could not verify your payment proof. Please verify your transaction details and submit again using /start."
-        )
+        try:
+            await context.bot.send_message(
+                chat_id=target_user_id,
+                text="❌ **Payment Verification Failed**\n\n"
+                     "We could not verify your payment screenshot. Please verify your transaction and try again using /start.",
+                parse_mode="Markdown"
+            )
+            status_text = "\n\n❌ **REJECTED**"
+        except Exception as e:
+            status_text = f"\n\n⚠️ **Rejected but failed to notify user:** {e}"
 
-        status_text = "\n\n❌ STATUS: REJECTED"
+    # Update Admin Group Message
+    try:
         if query.message.photo or query.message.document:
-            await query.edit_message_caption(caption=query.message.caption + status_text)
+            await query.edit_message_caption(caption=query.message.caption + status_text, parse_mode="Markdown")
         else:
-            await query.edit_message_text(text=query.message.text + status_text)
+            await query.edit_message_text(text=query.message.text + status_text, parse_mode="Markdown")
+    except Exception as e:
+        logging.error(f"Error editing admin message: {e}")
 
 async def cancel(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await update.message.reply_text("Cancelled. Send /start or /restart to begin again.")
@@ -291,4 +312,4 @@ if __name__ == "__main__":
     app.add_handler(CallbackQueryHandler(handle_admin_action, pattern="^(approve|reject)_"))
     
     app.run_polling()
-    
+            
